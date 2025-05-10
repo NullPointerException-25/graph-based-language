@@ -1,0 +1,97 @@
+
+// Encabezado
+parser code {:
+    import java_cup.runtime.*;
+    import java.util.*;
+
+
+    class Nodo {
+        String nombre;
+        int valor;
+
+        Nodo(String nombre, int valor) {
+            this.nombre = nombre;
+            this.valor = valor;
+        }
+
+        @Override
+        public String toString() {
+            return nombre + " = " + valor;
+        }
+    }
+
+    // Arista entre nodos
+    class Arista {
+        String origen;
+        String destino;
+        int peso;
+
+        Arista(String origen, String destino, int peso) {
+            this.origen = origen;
+            this.destino = destino;
+            this.peso = peso;
+        }
+
+        @Override
+        public String toString() {
+            return origen + " => " + destino + " : " + peso;
+        }
+    }
+
+    Map<String, Nodo> nodos = new HashMap<>();
+    List<Arista> aristas = new ArrayList<>();
+:};
+
+
+init with {: System.out.println("Análisis iniciado..."); :};
+scan with {: return lexer.yylex(); :};
+
+
+terminal DRAW, PATH, ARROW, COLON, SEMICOLON, EQUAL, COMMA, LPAREN, RPAREN;
+terminal String ID;
+terminal Integer NUM;
+
+
+non terminal program, instruction, instruction_list;
+non terminal expression, node, value;
+
+
+start with program;
+
+
+program ::= instruction_list;
+
+instruction_list ::= instruction SEMICOLON
+                   | instruction SEMICOLON instruction_list;
+
+instruction ::= node:E EQUAL value:V
+                {: 
+                    Nodo n = new Nodo(E, V);
+                    nodos.put(E, n);
+                    System.out.println("Nodo creado: " + n);
+                :}
+
+             | node:Origen ARROW node:Destino COLON value:Peso
+                {: 
+                    Arista a = new Arista(Origen, Destino, Peso);
+                    aristas.add(a);
+                    System.out.println("Arista creada: " + a);
+                :}
+
+             | PATH LPAREN node:Inicio COMMA node:Fin RPAREN
+                {: 
+                    System.out.println("Camino solicitado de " + Inicio + " a " + Fin);
+                    // Aquí puedes luego llamar a un algoritmo de camino
+                :}
+
+             | DRAW LPAREN node:N RPAREN
+                {: 
+                    System.out.println("Dibujar nodo/árbol desde: " + N);
+                    // Aquí puedes luego invocar un método de visualización
+                :}
+;
+
+
+node ::= ID;
+
+value ::= NUM;
