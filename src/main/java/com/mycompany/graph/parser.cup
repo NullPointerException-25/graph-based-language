@@ -1,9 +1,7 @@
 
-// Encabezado
 parser code {:
     import java_cup.runtime.*;
     import java.util.*;
-
 
     class Nodo {
         String nombre;
@@ -20,7 +18,6 @@ parser code {:
         }
     }
 
-    // Arista entre nodos
     class Arista {
         String origen;
         String destino;
@@ -40,58 +37,64 @@ parser code {:
 
     Map<String, Nodo> nodos = new HashMap<>();
     List<Arista> aristas = new ArrayList<>();
-:};
+:}
 
+// ===== CONFIGURACIÓN =====
+init with {: System.out.println("Análisis iniciado..."); :}
+scan with {: return lexer.yylex(); :}
 
-init with {: System.out.println("Análisis iniciado..."); :};
-scan with {: return lexer.yylex(); :};
-
-
+// ===== TERMINALES =====
 terminal DRAW, PATH, ARROW, COLON, SEMICOLON, EQUAL, COMMA, LPAREN, RPAREN;
 terminal String ID;
 terminal Integer NUM;
 
-
+// ===== NO TERMINALES =====
 non terminal program, instruction, instruction_list;
-non terminal expression, node, value;
+non terminal String node;
+non terminal Integer value;
 
-
+// ===== PUNTO DE ENTRADA =====
 start with program;
 
-
+// ===== GRAMÁTICA =====
 program ::= instruction_list;
 
 instruction_list ::= instruction SEMICOLON
                    | instruction SEMICOLON instruction_list;
 
 instruction ::= node:E EQUAL value:V
-                {: 
-                    Nodo n = new Nodo(E, V);
-                    nodos.put(E, n);
-                    System.out.println("Nodo creado: " + n);
+                {:
+                    if (nodos.containsKey(E)) {
+                        System.out.println("Error: Nodo '" + E + "' ya existe.");
+                    } else {
+                        Nodo n = new Nodo(E, V);
+                        nodos.put(E, n);
+                        System.out.println("Nodo creado: " + n);
+                    }
                 :}
 
              | node:Origen ARROW node:Destino COLON value:Peso
-                {: 
+                {:
+                    if (!nodos.containsKey(Origen) || !nodos.containsKey(Destino)) {
+                        System.out.println("Advertencia: Uno de los nodos no ha sido definido.");
+                    }
                     Arista a = new Arista(Origen, Destino, Peso);
                     aristas.add(a);
                     System.out.println("Arista creada: " + a);
                 :}
 
              | PATH LPAREN node:Inicio COMMA node:Fin RPAREN
-                {: 
-                    System.out.println("Camino solicitado de " + Inicio + " a " + Fin);
-                    // Aquí puedes luego llamar a un algoritmo de camino
+                {:
+                    System.out.println("Solicitud de camino de " + Inicio + " a " + Fin);
+                    // Lógica para calcular camino más corto puede ir aquí
                 :}
 
              | DRAW LPAREN node:N RPAREN
-                {: 
-                    System.out.println("Dibujar nodo/árbol desde: " + N);
-                    // Aquí puedes luego invocar un método de visualización
+                {:
+                    System.out.println("Dibujar desde nodo: " + N);
+                    // Lógica de visualización o impresión del árbol/nodo puede ir aquí
                 :}
 ;
 
-
-node ::= ID;
-
-value ::= NUM;
+node ::= ID {: RESULT = ID; :};
+value ::= NUM {: RESULT = NUM; :};
