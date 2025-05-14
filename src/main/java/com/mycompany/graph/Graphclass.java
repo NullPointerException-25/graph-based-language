@@ -10,20 +10,20 @@ public class Graphclass {
         this.adjList = new HashMap<>();
     }
 
-    // Agregar una arista
+    // arista
     public void addEdge(String from, String to, int weight) {
         adjList.putIfAbsent(from, new HashMap<>());
         adjList.putIfAbsent(to, new HashMap<>());
         adjList.get(from).put(to, weight);
     }
 
-    // Encontrar el camino más corto (usando Dijkstra como ejemplo)
+    // Encontrar el camino mas corto
     public String findPath(String start, String end) {
         if (!adjList.containsKey(start) || !adjList.containsKey(end)) {
             return "No se puede encontrar el camino, los nodos no existen.";
         }
 
-        // Dijkstra básico
+        // Dijkstra
         Map<String, Integer> distances = new HashMap<>();
         Map<String, String> previous = new HashMap<>();
         PriorityQueue<String> pq = new PriorityQueue<>(Comparator.comparingInt(distances::get));
@@ -47,7 +47,6 @@ public class Graphclass {
             }
         }
 
-        // Reconstruir el camino
         List<String> path = new ArrayList<>();
         for (String at = end; at != null; at = previous.get(at)) {
             path.add(at);
@@ -57,7 +56,6 @@ public class Graphclass {
         return distances.get(end) == Integer.MAX_VALUE ? "No hay camino." : String.join(" -> ", path);
     }
 
-    // Dibujar un árbol desde un nodo
     public void draw(String start, StringBuilder output) {
         if (!adjList.containsKey(start)) {
             output.append("Nodo no existe.\n");
@@ -79,7 +77,6 @@ public class Graphclass {
             drawHelper(neighbor, visited, level + 1, output);
         }
     }
-// Método accesorio para obtener el adjList
     public Map<String, Map<String, Integer>> getAdjList() {
         return adjList;
     }

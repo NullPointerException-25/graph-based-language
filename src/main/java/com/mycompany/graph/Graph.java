@@ -8,30 +8,24 @@ import java.util.HashMap;
 import java.util.Map;
 import com.mycompany.graph.Graphclass;
 
-/**
- * Simple IDE integrado con la clase Graph.
- *
- * @author user
- */
+
 public class Graph {
 
     public static void main(String[] args) {
-        // Crear la ventana principal
         JFrame frame = new JFrame("IDE Graph");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setSize(800, 600);
 
-        // Crear el panel principal
         JPanel panel = new JPanel(new BorderLayout());
         frame.add(panel);
 
-        // Área de texto para escribir el código
+        //código
         JTextArea codeArea = new JTextArea();
         JScrollPane codeScroll = new JScrollPane(codeArea);
         codeScroll.setBorder(BorderFactory.createTitledBorder("Editor de Código"));
         panel.add(codeScroll, BorderLayout.CENTER);
 
-        // Área de texto para mostrar la salida
+        // la salida
         JTextArea outputArea = new JTextArea();
         outputArea.setEditable(false);
         JScrollPane outputScroll = new JScrollPane(outputArea);
@@ -39,7 +33,7 @@ public class Graph {
         panel.add(outputScroll, BorderLayout.SOUTH);
         outputScroll.setPreferredSize(new Dimension(800, 150));
 
-        // Botones de acción
+        // botonsito
         JPanel buttonPanel = new JPanel();
         JButton analyzeButton = new JButton("Analizar");
         JButton executeButton = new JButton("Ejecutar");
@@ -52,11 +46,10 @@ public class Graph {
         buttonPanel.add(executeButton);
         panel.add(buttonPanel, BorderLayout.NORTH);
 
-        // Estructura para representar el grafo
         Graphclass graph = new Graphclass();
         Map<String, Integer> nodes = new HashMap<>();
 
-        // Funcionalidad para abrir archivos
+        //abrir archivos
         openButton.addActionListener(e -> {
             JFileChooser fileChooser = new JFileChooser();
             int option = fileChooser.showOpenDialog(frame);
@@ -74,7 +67,7 @@ public class Graph {
             }
         });
 
-        // Funcionalidad para guardar archivos
+        //guardar archivos
         saveButton.addActionListener(e -> {
             JFileChooser fileChooser = new JFileChooser();
             int option = fileChooser.showSaveDialog(frame);
@@ -88,7 +81,7 @@ public class Graph {
             }
         });
 
-        // Funcionalidad del botón "Analizar"
+        //analizar
         analyzeButton.addActionListener(e -> {
             String code = codeArea.getText();
             outputArea.setText("Analizando código...\n");
@@ -101,19 +94,17 @@ public class Graph {
                         continue;
                     }
 
-                    if (line.matches("[A-Za-z] = \\d+;")) {
-                        // Asignar valor a un nodo
+                    if (line.matches("[A-Za-z] = \\d+;")) {                 
                         String[] parts = line.split(" = ");
                         String node = parts[0].trim();
                         int value = Integer.parseInt(parts[1].replace(";", ""));
                         nodes.put(node, value);
                         outputArea.append("Nodo " + node + " asignado con valor " + value + "\n");
                     } else if (line.matches("[A-Za-z] => [A-Za-z]: \\d+;")) {
-                        // Crear una arista con peso
                         String[] parts = line.split("=>|:");
                         String from = parts[0].trim();
                         String to = parts[1].trim();
-                        int weight = Integer.parseInt(parts[2].replace(";", "").trim()); // Eliminar espacios extra aquí
+                        int weight = Integer.parseInt(parts[2].replace(";", "").trim());
                         graph.addEdge(from, to, weight);
                         outputArea.append("Arista añadida de " + from + " a " + to + " con peso " + weight + "\n");
                     } else if (line.matches("path\\([A-Za-z], [A-Za-z]\\);")) {
@@ -126,8 +117,8 @@ public class Graph {
                     } else if (line.matches("draw\\([A-Za-z]\\);")) {
                         String node = line.replace("draw(", "").replace(");", "").trim();
                         StringBuilder drawOutput = new StringBuilder();
-                        graph.draw(node, drawOutput); // Redirigir la salida a un StringBuilder
-                        outputArea.append(drawOutput.toString()); // Mostrar el resultado en el área de salida
+                        graph.draw(node, drawOutput); 
+                        outputArea.append(drawOutput.toString());
                     } else {
                         outputArea.append("Línea no reconocida: " + line + "\n");
                     }
@@ -147,7 +138,6 @@ public class Graph {
             graphFrame.setVisible(true);
         });
 
-        // Mostrar la ventana
         frame.setVisible(true);
     }
 }
