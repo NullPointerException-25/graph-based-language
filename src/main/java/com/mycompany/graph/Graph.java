@@ -90,38 +90,47 @@ public class Graph {
                 String[] lines = code.split("\\n");
                 for (String line : lines) {
                     line = line.trim();
-                    if (line.isEmpty()) {
-                        continue;
-                    }
+                if (line.isEmpty()) {
+                    continue;
+                }
 
-                    if (line.matches("[A-Za-z] = \\d+;")) {                 
-                        String[] parts = line.split(" = ");
-                        String node = parts[0].trim();
-                        int value = Integer.parseInt(parts[1].replace(";", ""));
-                        nodes.put(node, value);
-                        outputArea.append("Nodo " + node + " asignado con valor " + value + "\n");
-                    } else if (line.matches("[A-Za-z] => [A-Za-z]: \\d+;")) {
-                        String[] parts = line.split("=>|:");
-                        String from = parts[0].trim();
-                        String to = parts[1].trim();
-                        int weight = Integer.parseInt(parts[2].replace(";", "").trim());
-                        graph.addEdge(from, to, weight);
-                        outputArea.append("Arista añadida de " + from + " a " + to + " con peso " + weight + "\n");
-                    } else if (line.matches("path\\([A-Za-z], [A-Za-z]\\);")) {
-                        // Dibujar un camino
-                        String[] parts = line.replace("path(", "").replace(");", "").split(",");
-                        String start = parts[0].trim();
-                        String end = parts[1].trim();
-                        String path = graph.findPath(start, end);
-                        outputArea.append("Camino de " + start + " a " + end + ": " + path + "\n");
-                    } else if (line.matches("draw\\([A-Za-z]\\);")) {
-                        String node = line.replace("draw(", "").replace(");", "").trim();
-                        StringBuilder drawOutput = new StringBuilder();
-                        graph.draw(node, drawOutput); 
-                        outputArea.append(drawOutput.toString());
-                    } else {
-                        outputArea.append("Línea no reconocida: " + line + "\n");
-                    }
+                // Nodo: nombre = valor;
+                if (line.matches("\\s*[A-Za-z_][A-Za-z_0-9]*\\s*=\\s*\\d+\\s*;\\s*")) {
+                    String[] parts = line.split("=");
+                    String node = parts[0].trim();
+                    int value = Integer.parseInt(parts[1].replace(";", "").trim());
+                    nodes.put(node, value);
+                    outputArea.append("Nodo " + node + " asignado con valor " + value + "\n");
+
+                // Arista: origen => destino : peso;
+                } else if (line.matches("\\s*[A-Za-z_][A-Za-z_0-9]*\\s*=>\\s*[A-Za-z_][A-Za-z_0-9]*\\s*:\\s*\\d+\\s*;\\s*")) {
+                    String[] parts = line.split("=>|:");
+                    String from = parts[0].trim();
+                    String to = parts[1].trim();
+                    int weight = Integer.parseInt(parts[2].replace(";", "").trim());
+                    graph.addEdge(from, to, weight);
+                    outputArea.append("Arista añadida de " + from + " a " + to + " con peso " + weight + "\n");
+
+                // Camino: path(origen, destino);
+                } else if (line.matches("\\s*path\\s*\\(\\s*[A-Za-z_][A-Za-z_0-9]*\\s*,\\s*[A-Za-z_][A-Za-z_0-9]*\\s*\\)\\s*;\\s*")) {
+                    String[] parts = line.replaceAll("path\\s*\\(|\\)\\s*;", "").split(",");
+                    String start = parts[0].trim();
+                    String end = parts[1].trim();
+                    String path = graph.findPath(start, end);
+                    outputArea.append("Camino de " + start + " a " + end + ": " + path + "\n");
+
+                // Dibujar: draw(nombre);
+                } else if (line.matches("\\s*draw\\s*\\(\\s*[A-Za-z_][A-Za-z_0-9]*\\s*\\)\\s*;\\s*")) {
+                    String node = line.replaceAll("draw\\s*\\(|\\)\\s*;", "").trim();
+                    StringBuilder drawOutput = new StringBuilder();
+                    graph.draw(node, drawOutput); 
+                    outputArea.append(drawOutput.toString());
+
+                // Error: línea no reconocida
+                } else {
+                    outputArea.append("Línea no reconocida: " + line + "\n");
+                }
+
                 }
             } catch (Exception ex) {
                 outputArea.append("Error al analizar el código: " + ex.getMessage() + "\n");
