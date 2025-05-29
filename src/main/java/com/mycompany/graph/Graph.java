@@ -7,10 +7,24 @@ import java.io.*;
 import java.util.HashMap;
 import java.util.Map;
 import com.mycompany.graph.Graphclass;
-
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
+import java.awt.event.*;
+import javax.swing.text.*;
 
 public class Graph {
+    private static void highlightLine(JTextArea textArea, int lineNumber, Color color) {
+        try {
+            Highlighter highlighter = textArea.getHighlighter();
+            highlighter.removeAllHighlights();
 
+            int start = textArea.getLineStartOffset(lineNumber);
+            int end = textArea.getLineEndOffset(lineNumber);
+            highlighter.addHighlight(start, end, new DefaultHighlighter.DefaultHighlightPainter(color));
+        } catch (BadLocationException ex) {
+            ex.printStackTrace();
+        }
+    }
     public static void main(String[] args) {
         JFrame frame = new JFrame("IDE Graph");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -24,7 +38,46 @@ public class Graph {
         JScrollPane codeScroll = new JScrollPane(codeArea);
         codeScroll.setBorder(BorderFactory.createTitledBorder("Editor de Código"));
         panel.add(codeScroll, BorderLayout.CENTER);
+        JTextArea lineNumbers = new JTextArea("0");
+        lineNumbers.setEditable(false);
+        lineNumbers.setBackground(Color.LIGHT_GRAY);
+        lineNumbers.setFont(codeArea.getFont());
 
+        codeArea.getDocument().addDocumentListener(new DocumentListener() {
+            public String getText() {
+                int lines = codeArea.getLineCount();
+                StringBuilder sb = new StringBuilder();
+                for (int i = 0; i <= lines; i++) {
+                    sb.append(i).append(System.lineSeparator());
+                }
+                return sb.toString();
+            }
+
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                lineNumbers.setText(getText());
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                lineNumbers.setText(getText());
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                lineNumbers.setText(getText());
+            }
+        });
+        // Mostrar números de línea a la izquierda
+        JScrollPane lineScroll = new JScrollPane(lineNumbers);
+        lineScroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_NEVER);
+        lineScroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        lineScroll.setPreferredSize(new Dimension(30, Integer.MAX_VALUE));
+
+        JPanel editorPanel = new JPanel(new BorderLayout());
+        editorPanel.add(lineScroll, BorderLayout.WEST);
+        editorPanel.add(codeScroll, BorderLayout.CENTER);
+        panel.add(editorPanel, BorderLayout.CENTER);
         // la salida
         JTextArea outputArea = new JTextArea();
         outputArea.setEditable(false);
@@ -35,20 +88,26 @@ public class Graph {
 
         // botonsito
         JPanel buttonPanel = new JPanel();
+        JButton clearButton = new JButton("Limpiar"); // agregue un boton de limpiar
         JButton analyzeButton = new JButton("Analizar");
         JButton executeButton = new JButton("Ejecutar");
         JButton openButton = new JButton("Abrir Archivo");
         JButton saveButton = new JButton("Guardar Archivo");
 
+
         buttonPanel.add(openButton);
         buttonPanel.add(saveButton);
         buttonPanel.add(analyzeButton);
         buttonPanel.add(executeButton);
+        buttonPanel.add(clearButton);
         panel.add(buttonPanel, BorderLayout.NORTH);
 
         Graphclass graph = new Graphclass();
         Map<String, Integer> nodes = new HashMap<>();
-
+        clearButton.addActionListener(e -> {
+            codeArea.setText("");
+            outputArea.setText("");
+        });
         //abrir archivos
         openButton.addActionListener(e -> {
             JFileChooser fileChooser = new JFileChooser();
@@ -85,11 +144,11 @@ public class Graph {
         analyzeButton.addActionListener(e -> {
             String code = codeArea.getText();
             outputArea.setText("Analizando código...\n");
-
+            codeArea.getHighlighter().removeAllHighlights(); // Limpia resaltados anteriores
             try {
                 String[] lines = code.split("\\n");
-                for (String line : lines) {
-                    line = line.trim();
+                for (int i = 0; i < lines.length; i++) {
+                    String line = lines[i].trim();
                 if (line.isEmpty()) {
                     continue;
                 }
@@ -129,6 +188,7 @@ public class Graph {
                 // Error: línea no reconocida
                 } else {
                     outputArea.append("Línea no reconocida: " + line + "\n");
+                    highlightLine(codeArea, i, Color.PINK); // 'i' es el índice de la línea con error
                 }
 
                 }
