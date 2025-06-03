@@ -7,12 +7,15 @@ import java.io.*;
 import java.util.HashMap;
 import java.util.Map;
 import com.mycompany.graph.Graphclass;
+import java_cup.runtime.Symbol;
+
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import java.awt.event.*;
 import javax.swing.text.*;
 
 public class Graph {
+    private static   Parser parser;
     private static void highlightLine(JTextArea textArea, int lineNumber, Color color) {
         try {
             Highlighter highlighter = textArea.getHighlighter();
@@ -102,8 +105,7 @@ public class Graph {
         buttonPanel.add(clearButton);
         panel.add(buttonPanel, BorderLayout.NORTH);
 
-        Graphclass graph = new Graphclass();
-        Map<String, Integer> nodes = new HashMap<>();
+
         clearButton.addActionListener(e -> {
             codeArea.setText("");
             outputArea.setText("");
@@ -141,59 +143,66 @@ public class Graph {
         });
 
         //analizar
-        analyzeButton.addActionListener(e -> {
+       analyzeButton.addActionListener(e -> {
             String code = codeArea.getText();
             outputArea.setText("Analizando código...\n");
-            codeArea.getHighlighter().removeAllHighlights(); // Limpia resaltados anteriores
+            codeArea.getHighlighter().removeAllHighlights();
+
             try {
-                String[] lines = code.split("\\n");
-                for (int i = 0; i < lines.length; i++) {
-                    String line = lines[i].trim();
-                if (line.isEmpty()) {
-                    continue;
+                // Create lexer and parser instances
+                Lexer lexer = new Lexer(new StringReader(code));
+                 parser = new Parser(lexer);
+
+                // Create custom error handler to capture syntax errors
+                parser.setErrorHandler(new ErrorHandler() {
+                    @Override
+                    public void report_error(String message, Object info) {
+                        if (info instanceof Symbol symbol) {
+                            int line = symbol.left - 1; // Convert to 0-based indexing
+                            outputArea.append("Error en línea " + (line + 1) + ": " + message + "\n");
+
+                            try {
+                                // Highlight the error line
+                                highlightLine(codeArea, line, Color.PINK);
+                            } catch (Exception ex) {
+                                ex.printStackTrace();
+                            }
+                        } else {
+                            outputArea.append("Error: " + message + "\n");
+                        }
+                    }
+                });
+
+                // Parse the code
+                parser.parse();
+
+                // If we get here without exceptions, parsing was successful
+                outputArea.append("Análisis completado sin errores sintácticos.\n");
+
+                // Display graph information
+                for (Map.Entry<String, Parser.Nodo> entry : parser.nodos.entrySet()) {
+                    outputArea.append("Nodo: " + entry.getValue() + "\n");
                 }
 
-                // Nodo: nombre = valor;
-                if (line.matches("\\s*[A-Za-z_][A-Za-z_0-9]*\\s*=\\s*\\d+\\s*;\\s*")) {
-                    String[] parts = line.split("=");
-                    String node = parts[0].trim();
-                    int value = Integer.parseInt(parts[1].replace(";", "").trim());
-                    nodes.put(node, value);
-                    outputArea.append("Nodo " + node + " asignado con valor " + value + "\n");
-
-                // Arista: origen => destino : peso;
-                } else if (line.matches("\\s*[A-Za-z_][A-Za-z_0-9]*\\s*=>\\s*[A-Za-z_][A-Za-z_0-9]*\\s*:\\s*\\d+\\s*;\\s*")) {
-                    String[] parts = line.split("=>|:");
-                    String from = parts[0].trim();
-                    String to = parts[1].trim();
-                    int weight = Integer.parseInt(parts[2].replace(";", "").trim());
-                    graph.addEdge(from, to, weight);
-                    outputArea.append("Arista añadida de " + from + " a " + to + " con peso " + weight + "\n");
-
-                // Camino: path(origen, destino);
-                } else if (line.matches("\\s*path\\s*\\(\\s*[A-Za-z_][A-Za-z_0-9]*\\s*,\\s*[A-Za-z_][A-Za-z_0-9]*\\s*\\)\\s*;\\s*")) {
-                    String[] parts = line.replaceAll("path\\s*\\(|\\)\\s*;", "").split(",");
-                    String start = parts[0].trim();
-                    String end = parts[1].trim();
-                    String path = graph.findPath(start, end);
-                    outputArea.append("Camino de " + start + " a " + end + ": " + path + "\n");
-
-                // Dibujar: draw(nombre);
-                } else if (line.matches("\\s*draw\\s*\\(\\s*[A-Za-z_][A-Za-z_0-9]*\\s*\\)\\s*;\\s*")) {
-                    String node = line.replaceAll("draw\\s*\\(|\\)\\s*;", "").trim();
-                    StringBuilder drawOutput = new StringBuilder();
-                    graph.draw(node, drawOutput); 
-                    outputArea.append(drawOutput.toString());
-
-                // Error: línea no reconocida
-                } else {
-                    outputArea.append("Línea no reconocida: " + line + "\n");
-                    highlightLine(codeArea, i, Color.PINK); // 'i' es el índice de la línea con error
+                for (Parser.Arista arista : parser.aristas) {
+                    outputArea.append("Arista: " + arista + "\n");
                 }
 
-                }
             } catch (Exception ex) {
-                outputArea.append("Error al analizar el código: " + ex.getMessage() + "\n");
+                // Handle lexical or other errors
+                if (ex instanceof LexicalError) {
+                    LexicalError lexError = (LexicalError) ex;
+                    outputArea.append("Error léxico en línea " + lexError.getLine() +
+                                     ", columna " + lexError.getColumn() + ": " +
+                                     lexError.getMessage() + "\n");
+
+                    // Highlight the line with the lexical error
+                    highlightLine(codeArea, lexError.getLine() - 1, Color.PINK);
+                } else {
+                    // General error handling
+                    outputArea.append("Error al analizar: " + ex.getMessage() + "\n");
+                    ex.printStackTrace();
+                }
             }
         });
 
@@ -202,7 +211,7 @@ public class Graph {
             graphFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
             graphFrame.setSize(600, 600);
 
-            GraphPanel graphPanel = new GraphPanel(graph.getAdjList());
+            GraphPanel graphPanel = new GraphPanel(parser.graph.getAdjList());
             graphFrame.add(graphPanel);
             graphFrame.setVisible(true);
         });

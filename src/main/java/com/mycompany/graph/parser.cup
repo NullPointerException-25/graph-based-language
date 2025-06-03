@@ -1,7 +1,31 @@
+package com.mycompany.graph;
+import java_cup.runtime.*;
+import java.util.*;
+import com.mycompany.graph.ErrorHandler;
+import com.mycompany.graph.Graphclass;
 
+/* Parser code section */
 parser code {:
-    import java_cup.runtime.*;
-    import java.util.*;
+    Graphclass graph = new Graphclass();
+    private ErrorHandler errorHandler;
+
+    public void setErrorHandler(ErrorHandler handler) {
+        this.errorHandler = handler;
+    }
+
+    // Override the default error reporting method
+    @Override
+    public void report_error(String message, Object info) {
+        if (errorHandler != null) {
+            errorHandler.report_error(message, info);
+        } else {
+            super.report_error(message, info);
+        }
+    }
+
+    public void user_init() throws java.lang.Exception {
+        System.out.println("Análisis iniciado...");
+    }
 
     class Nodo {
         String nombre;
@@ -39,24 +63,21 @@ parser code {:
     List<Arista> aristas = new ArrayList<>();
 :}
 
-// ===== CONFIGURACIÓN =====
-init with {: System.out.println("Análisis iniciado..."); :}
-scan with {: return lexer.yylex(); :}
-
-// ===== TERMINALES =====
-terminal DRAW, PATH, ARROW, COLON, SEMICOLON, EQUAL, COMMA, LPAREN, RPAREN;
-terminal String ID;
+/* Terminals (tokens from the lexer) */
+terminal LPAREN, RPAREN, COMMA, COLON, SEMICOLON, EQUAL, ARROW;
+terminal PATH, DRAW;
 terminal Integer NUM;
+terminal String ID;
 
-// ===== NO TERMINALES =====
+/* Non-terminals */
 non terminal program, instruction, instruction_list;
 non terminal String node;
 non terminal Integer value;
 
-// ===== PUNTO DE ENTRADA =====
+/* Start symbol */
 start with program;
 
-// ===== GRAMÁTICA =====
+/* Grammar rules */
 program ::= instruction_list;
 
 instruction_list ::= instruction SEMICOLON
@@ -64,31 +85,33 @@ instruction_list ::= instruction SEMICOLON
 
 instruction ::= node:E EQUAL value:V
                 {:
-                    if (nodos.containsKey(E)) {
+                    if (parser.nodos.containsKey(E)) {
                         System.out.println("Error: Nodo '" + E + "' ya existe.");
                     } else {
-                        Nodo n = new Nodo(E, V);
-                        nodos.put(E, n);
+                        Parser.Nodo n = new Parser.Nodo(E, V);
+                        parser.nodos.put(E, n);
                         System.out.println("Nodo creado: " + n);
                     }
                 :}
-
              | node:Origen ARROW node:Destino COLON value:Peso
                 {:
-                    if (!nodos.containsKey(Origen) || !nodos.containsKey(Destino)) {
+                    if (!parser.nodos.containsKey(Origen) || !parser.nodos.containsKey(Destino)) {
                         System.out.println("Advertencia: Uno de los nodos no ha sido definido.");
                     }
-                    Arista a = new Arista(Origen, Destino, Peso);
-                    aristas.add(a);
+                    Parser.Arista a = new Parser.Arista(Origen, Destino, Peso);
+                    parser.aristas.add(a);
+                    parser.graph.addEdge(Origen, Destino, Peso);
                     System.out.println("Arista creada: " + a);
                 :}
-
              | PATH LPAREN node:Inicio COMMA node:Fin RPAREN
                 {:
                     System.out.println("Solicitud de camino de " + Inicio + " a " + Fin);
-                    // Lógica para calcular camino más corto puede ir aquí
-                :}
+                    if (!parser.nodos.containsKey(Inicio) || !parser.nodos.containsKey(Fin)) {
+                        System.out.println("Advertencia: Uno de los nodos no ha sido definido.");
+                    }
+                    graph.findPath(Inicio, Fin);
 
+                :}
              | DRAW LPAREN node:N RPAREN
                 {:
                     System.out.println("Dibujar desde nodo: " + N);
@@ -96,5 +119,6 @@ instruction ::= node:E EQUAL value:V
                 :}
 ;
 
-node ::= ID {: RESULT = ID; :};
-value ::= NUM {: RESULT = NUM; :};
+/* Fixed rules to correctly get the token values */
+node ::= ID:id {: RESULT = id; :};
+value ::= NUM:num {: RESULT = num; :};
