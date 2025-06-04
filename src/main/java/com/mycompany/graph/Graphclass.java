@@ -5,6 +5,7 @@ import java.util.*;
 public class Graphclass {
 
     public Map<String, Map<String, Integer>> adjList;
+    public ArrayList<String> path;
 
     public Graphclass() {
         this.adjList = new HashMap<>();
@@ -18,9 +19,9 @@ public class Graphclass {
     }
 
     // Encontrar el camino mas corto
-    public String findPath(String start, String end) {
+    public void  findPath(String start, String end) {
         if (!adjList.containsKey(start) || !adjList.containsKey(end)) {
-            return "No se puede encontrar el camino, los nodos no existen.";
+            return;
         }
 
         // Dijkstra
@@ -47,13 +48,12 @@ public class Graphclass {
             }
         }
 
-        List<String> path = new ArrayList<>();
+       path = new ArrayList<>();
         for (String at = end; at != null; at = previous.get(at)) {
             path.add(at);
         }
         Collections.reverse(path);
 
-        return distances.get(end) == Integer.MAX_VALUE ? "No hay camino." : String.join(" -> ", path);
     }
 
     public void draw(String start, StringBuilder output) {
