@@ -159,16 +159,14 @@ public class Graph {
                     public void report_error(String message, Object info) {
                         if (info instanceof Symbol symbol) {
                             int line = symbol.left - 1; // Convert to 0-based indexing
-                            outputArea.append("Error en línea " + (line + 1) + ": " + message + "\n");
+                            outputArea.append("Error en línea " + (line + 1) + ": " + symbol.value + "\n");
+                            System.err.println("Error en línea " + (line + 1) + ": " + symbol.value + "\n");
 
-                            try {
-                                // Highlight the error line
-                                highlightLine(codeArea, line, Color.PINK);
-                            } catch (Exception ex) {
-                                ex.printStackTrace();
-                            }
+                            // Highlight the error line
+                            highlightLine(codeArea, line, Color.PINK);
                         } else {
                             outputArea.append("Error: " + message + "\n");
+                            System.err.println("Error: " + message);
                         }
                     }
                 });
@@ -189,10 +187,8 @@ public class Graph {
                 }
 
             } catch (Exception ex) {
-                // Handle lexical or other errors
-                if (ex instanceof LexicalError) {
-                    LexicalError lexError = (LexicalError) ex;
-                    outputArea.append("Error léxico en línea " + lexError.getLine() +
+                if (ex instanceof LexicalError lexError) {
+                    outputArea.append("Error léxico en línea " + lexError.getLine() + 2 +
                                      ", columna " + lexError.getColumn() + ": " +
                                      lexError.getMessage() + "\n");
 
@@ -201,7 +197,7 @@ public class Graph {
                 } else {
                     // General error handling
                     outputArea.append("Error al analizar: " + ex.getMessage() + "\n");
-                    ex.printStackTrace();
+
                 }
             }
         });
@@ -210,8 +206,8 @@ public class Graph {
             JFrame graphFrame = new JFrame("Visualización del Grafo");
             graphFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
             graphFrame.setSize(600, 600);
-
-            GraphPanel graphPanel = new GraphPanel(parser.graph.getAdjList());
+            frame.setLocationRelativeTo(null);
+            GraphPanel graphPanel = new GraphPanel(parser.graph.getAdjList(), parser.graph.path);
             graphFrame.add(graphPanel);
             graphFrame.setVisible(true);
         });
