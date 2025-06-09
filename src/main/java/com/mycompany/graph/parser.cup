@@ -1,31 +1,7 @@
-package com.mycompany.graph;
-import java_cup.runtime.*;
-import java.util.*;
-import com.mycompany.graph.ErrorHandler;
-import com.mycompany.graph.Graphclass;
 
-/* Parser code section */
 parser code {:
-    Graphclass graph = new Graphclass();
-    private ErrorHandler errorHandler;
-
-    public void setErrorHandler(ErrorHandler handler) {
-        this.errorHandler = handler;
-    }
-
-    // Override the default error reporting method
-    @Override
-    public void report_error(String message, Object info) {
-        if (errorHandler != null) {
-            errorHandler.report_error(message, info);
-        } else {
-            super.report_error(message, info);
-        }
-    }
-
-    public void user_init() throws java.lang.Exception {
-        System.out.println("Análisis iniciado...");
-    }
+    import java_cup.runtime.*;
+    import java.util.*;
 
     class Nodo {
         String nombre;
@@ -61,23 +37,27 @@ parser code {:
 
     Map<String, Nodo> nodos = new HashMap<>();
     List<Arista> aristas = new ArrayList<>();
+    public static boolean error = false;
 :}
 
-/* Terminals (tokens from the lexer) */
-terminal LPAREN, RPAREN, COMMA, COLON, SEMICOLON, EQUAL, ARROW;
-terminal PATH, DRAW;
-terminal Integer NUM;
-terminal String ID;
+// ===== CONFIGURACIÓN =====
+init with {: System.out.println("Análisis iniciado..."); :}
+scan with {: return lexer.yylex(); :}
 
-/* Non-terminals */
+// ===== TERMINALES =====
+terminal DRAW, PATH, ARROW, COLON, SEMICOLON, EQUAL, COMMA, LPAREN, RPAREN;
+terminal String ID;
+terminal Integer NUM;
+
+// ===== NO TERMINALES =====
 non terminal program, instruction, instruction_list;
 non terminal String node;
 non terminal Integer value;
 
-/* Start symbol */
+// ===== PUNTO DE ENTRADA =====
 start with program;
 
-/* Grammar rules */
+// ===== GRAMÁTICA =====
 program ::= instruction_list;
 
 instruction_list ::= instruction SEMICOLON
@@ -85,40 +65,44 @@ instruction_list ::= instruction SEMICOLON
 
 instruction ::= node:E EQUAL value:V
                 {:
-                    if (parser.nodos.containsKey(E)) {
+                    if (nodos.containsKey(E)) {
                         System.out.println("Error: Nodo '" + E + "' ya existe.");
                     } else {
-                        Parser.Nodo n = new Parser.Nodo(E, V);
-                        parser.nodos.put(E, n);
+                        Nodo n = new Nodo(E, V);
+                        nodos.put(E, n);
                         System.out.println("Nodo creado: " + n);
                     }
                 :}
+
              | node:Origen ARROW node:Destino COLON value:Peso
                 {:
-                    if (!parser.nodos.containsKey(Origen) || !parser.nodos.containsKey(Destino)) {
+                    if (!nodos.containsKey(Origen) || !nodos.containsKey(Destino)) {
                         System.out.println("Advertencia: Uno de los nodos no ha sido definido.");
                     }
-                    Parser.Arista a = new Parser.Arista(Origen, Destino, Peso);
-                    parser.aristas.add(a);
-                    parser.graph.addEdge(Origen, Destino, Peso);
+                    Arista a = new Arista(Origen, Destino, Peso);
+                    aristas.add(a);
                     System.out.println("Arista creada: " + a);
                 :}
+
              | PATH LPAREN node:Inicio COMMA node:Fin RPAREN
                 {:
                     System.out.println("Solicitud de camino de " + Inicio + " a " + Fin);
-                    if (!parser.nodos.containsKey(Inicio) || !parser.nodos.containsKey(Fin)) {
-                        System.out.println("Advertencia: Uno de los nodos no ha sido definido.");
-                    }
-                    graph.findPath(Inicio, Fin);
-
+                    // Lógica para calcular camino más corto puede ir aquí
                 :}
+
              | DRAW LPAREN node:N RPAREN
                 {:
                     System.out.println("Dibujar desde nodo: " + N);
                     // Lógica de visualización o impresión del árbol/nodo puede ir aquí
                 :}
+
+             | error
+                {:
+                    System.err.println("¡Error de sintaxis detectado!");
+                    parser.error = true;
+                :}
 ;
 
-/* Fixed rules to correctly get the token values */
-node ::= ID:id {: RESULT = id; :};
-value ::= NUM:num {: RESULT = num; :};
+node ::= ID {: RESULT = ID; :};
+value ::= NUM {: RESULT = NUM; :};
+

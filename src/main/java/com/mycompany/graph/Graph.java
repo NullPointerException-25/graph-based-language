@@ -7,27 +7,9 @@ import java.io.*;
 import java.util.HashMap;
 import java.util.Map;
 import com.mycompany.graph.Graphclass;
-import java_cup.runtime.Symbol;
-
-import javax.swing.event.DocumentEvent;
-import javax.swing.event.DocumentListener;
-import java.awt.event.*;
-import javax.swing.text.*;
 
 public class Graph {
-    private static   Parser parser;
-    private static void highlightLine(JTextArea textArea, int lineNumber, Color color) {
-        try {
-            Highlighter highlighter = textArea.getHighlighter();
-            highlighter.removeAllHighlights();
 
-            int start = textArea.getLineStartOffset(lineNumber);
-            int end = textArea.getLineEndOffset(lineNumber);
-            highlighter.addHighlight(start, end, new DefaultHighlighter.DefaultHighlightPainter(color));
-        } catch (BadLocationException ex) {
-            ex.printStackTrace();
-        }
-    }
     public static void main(String[] args) {
         JFrame frame = new JFrame("IDE Graph");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -36,52 +18,11 @@ public class Graph {
         JPanel panel = new JPanel(new BorderLayout());
         frame.add(panel);
 
-        //código
         JTextArea codeArea = new JTextArea();
         JScrollPane codeScroll = new JScrollPane(codeArea);
         codeScroll.setBorder(BorderFactory.createTitledBorder("Editor de Código"));
         panel.add(codeScroll, BorderLayout.CENTER);
-        JTextArea lineNumbers = new JTextArea("0");
-        lineNumbers.setEditable(false);
-        lineNumbers.setBackground(Color.LIGHT_GRAY);
-        lineNumbers.setFont(codeArea.getFont());
 
-        codeArea.getDocument().addDocumentListener(new DocumentListener() {
-            public String getText() {
-                int lines = codeArea.getLineCount();
-                StringBuilder sb = new StringBuilder();
-                for (int i = 0; i <= lines; i++) {
-                    sb.append(i).append(System.lineSeparator());
-                }
-                return sb.toString();
-            }
-
-            @Override
-            public void insertUpdate(DocumentEvent e) {
-                lineNumbers.setText(getText());
-            }
-
-            @Override
-            public void removeUpdate(DocumentEvent e) {
-                lineNumbers.setText(getText());
-            }
-
-            @Override
-            public void changedUpdate(DocumentEvent e) {
-                lineNumbers.setText(getText());
-            }
-        });
-        // Mostrar números de línea a la izquierda
-        JScrollPane lineScroll = new JScrollPane(lineNumbers);
-        lineScroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_NEVER);
-        lineScroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
-        lineScroll.setPreferredSize(new Dimension(30, Integer.MAX_VALUE));
-
-        JPanel editorPanel = new JPanel(new BorderLayout());
-        editorPanel.add(lineScroll, BorderLayout.WEST);
-        editorPanel.add(codeScroll, BorderLayout.CENTER);
-        panel.add(editorPanel, BorderLayout.CENTER);
-        // la salida
         JTextArea outputArea = new JTextArea();
         outputArea.setEditable(false);
         JScrollPane outputScroll = new JScrollPane(outputArea);
@@ -89,28 +30,23 @@ public class Graph {
         panel.add(outputScroll, BorderLayout.SOUTH);
         outputScroll.setPreferredSize(new Dimension(800, 150));
 
-        // botonsito
         JPanel buttonPanel = new JPanel();
-        JButton clearButton = new JButton("Limpiar"); // agregue un boton de limpiar
         JButton analyzeButton = new JButton("Analizar");
         JButton executeButton = new JButton("Ejecutar");
         JButton openButton = new JButton("Abrir Archivo");
         JButton saveButton = new JButton("Guardar Archivo");
 
-
         buttonPanel.add(openButton);
         buttonPanel.add(saveButton);
         buttonPanel.add(analyzeButton);
         buttonPanel.add(executeButton);
-        buttonPanel.add(clearButton);
         panel.add(buttonPanel, BorderLayout.NORTH);
 
+        executeButton.setEnabled(false); // ← Aquí deshabilitamos el botón al inicio
 
-        clearButton.addActionListener(e -> {
-            codeArea.setText("");
-            outputArea.setText("");
-        });
-        //abrir archivos
+        Graphclass graph = new Graphclass();
+        Map<String, Integer> nodes = new HashMap<>();
+
         openButton.addActionListener(e -> {
             JFileChooser fileChooser = new JFileChooser();
             int option = fileChooser.showOpenDialog(frame);
@@ -128,7 +64,6 @@ public class Graph {
             }
         });
 
-        //guardar archivos
         saveButton.addActionListener(e -> {
             JFileChooser fileChooser = new JFileChooser();
             int option = fileChooser.showSaveDialog(frame);
@@ -142,63 +77,80 @@ public class Graph {
             }
         });
 
-        //analizar
-       analyzeButton.addActionListener(e -> {
+        analyzeButton.addActionListener(e -> {
             String code = codeArea.getText();
             outputArea.setText("Analizando código...\n");
-            codeArea.getHighlighter().removeAllHighlights();
+            boolean hayErrores = false;
+            nodes.clear();
+            graph.clear(); // ← Si tienes un método clear en Graphclass para limpiar aristas previas
 
             try {
-                // Create lexer and parser instances
-                Lexer lexer = new Lexer(new StringReader(code));
-                 parser = new Parser(lexer);
+                String[] lines = code.split("\\n");
+                for (String line : lines) {
+                    line = line.trim();
+                    if (line.isEmpty()) continue;
 
-                // Create custom error handler to capture syntax errors
-                parser.setErrorHandler(new ErrorHandler() {
-                    @Override
-                    public void report_error(String message, Object info) {
-                        if (info instanceof Symbol symbol) {
-                            int line = symbol.left - 1; // Convert to 0-based indexing
-                            outputArea.append("Error en línea " + (line + 1) + ": " + symbol.value + "\n");
-                            System.err.println("Error en línea " + (line + 1) + ": " + symbol.value + "\n");
-
-                            // Highlight the error line
-                            highlightLine(codeArea, line, Color.PINK);
+                    if (line.matches("[A-Za-z] = \\d+;")) {
+                        String[] parts = line.split(" = ");
+                        String node = parts[0].trim();
+                        int value = Integer.parseInt(parts[1].replace(";", ""));
+                        if (nodes.containsKey(node)) {
+                            outputArea.append("Error: Nodo '" + node + "' ya fue definido.\n");
+                            hayErrores = true;
                         } else {
-                            outputArea.append("Error: " + message + "\n");
-                            System.err.println("Error: " + message);
+                            nodes.put(node, value);
+                            outputArea.append("Nodo " + node + " asignado con valor " + value + "\n");
                         }
+                    } else if (line.matches("[A-Za-z] => [A-Za-z]: \\d+;")) {
+                        String[] parts = line.split("=>|:");
+                        String from = parts[0].trim();
+                        String to = parts[1].trim();
+                        int weight = Integer.parseInt(parts[2].replace(";", "").trim());
+                        if (!nodes.containsKey(from) || !nodes.containsKey(to)) {
+                            outputArea.append("Error: Uno o ambos nodos no existen para la arista: " + from + " => " + to + "\n");
+                            hayErrores = true;
+                        } else {
+                            graph.addEdge(from, to, weight);
+                            outputArea.append("Arista añadida de " + from + " a " + to + " con peso " + weight + "\n");
+                        }
+                    } else if (line.matches("path\\([A-Za-z], [A-Za-z]\\);")) {
+                        String[] parts = line.replace("path(", "").replace(");", "").split(",");
+                        String start = parts[0].trim();
+                        String end = parts[1].trim();
+                        if (!nodes.containsKey(start) || !nodes.containsKey(end)) {
+                            outputArea.append("Error: Nodo de inicio o fin no definido: " + start + " a " + end + "\n");
+                            hayErrores = true;
+                        } else {
+                            String path = graph.findPath(start, end);
+                            outputArea.append("Camino de " + start + " a " + end + ": " + path + "\n");
+                        }
+                    } else if (line.matches("draw\\([A-Za-z]\\);")) {
+                        String node = line.replace("draw(", "").replace(");", "").trim();
+                        if (!nodes.containsKey(node)) {
+                            outputArea.append("Error: Nodo no definido para dibujar: " + node + "\n");
+                            hayErrores = true;
+                        } else {
+                            StringBuilder drawOutput = new StringBuilder();
+                            graph.draw(node, drawOutput);
+                            outputArea.append(drawOutput.toString());
+                        }
+                    } else {
+                        outputArea.append("Línea no reconocida: " + line + "\n");
+                        hayErrores = true;
                     }
-                });
-
-                // Parse the code
-                parser.parse();
-
-                // If we get here without exceptions, parsing was successful
-                outputArea.append("Análisis completado sin errores sintácticos.\n");
-
-                // Display graph information
-                for (Map.Entry<String, Parser.Nodo> entry : parser.nodos.entrySet()) {
-                    outputArea.append("Nodo: " + entry.getValue() + "\n");
                 }
 
-                for (Parser.Arista arista : parser.aristas) {
-                    outputArea.append("Arista: " + arista + "\n");
+                if (hayErrores) {
+                    outputArea.append("\nSe encontraron errores. No se ejecutará la lógica principal.\n");
+                    executeButton.setEnabled(false); // ← Deshabilita el botón
+                } else {
+                    outputArea.append("\nAnálisis completado sin errores.\n");
+                    executeButton.setEnabled(true); // ← Habilita el botón
                 }
 
             } catch (Exception ex) {
-                if (ex instanceof LexicalError lexError) {
-                    outputArea.append("Error léxico en línea " + lexError.getLine() + 2 +
-                                     ", columna " + lexError.getColumn() + ": " +
-                                     lexError.getMessage() + "\n");
-
-                    // Highlight the line with the lexical error
-                    highlightLine(codeArea, lexError.getLine() - 1, Color.PINK);
-                } else {
-                    // General error handling
-                    outputArea.append("Error al analizar: " + ex.getMessage() + "\n");
-
-                }
+                outputArea.append("Error al analizar el código: " + ex.getMessage() + "\n");
+                executeButton.setEnabled(false);
             }
         });
 
@@ -206,8 +158,8 @@ public class Graph {
             JFrame graphFrame = new JFrame("Visualización del Grafo");
             graphFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
             graphFrame.setSize(600, 600);
-            frame.setLocationRelativeTo(null);
-            GraphPanel graphPanel = new GraphPanel(parser.graph.getAdjList(), parser.graph.path);
+
+            GraphPanel graphPanel = new GraphPanel(graph.getAdjList());
             graphFrame.add(graphPanel);
             graphFrame.setVisible(true);
         });
