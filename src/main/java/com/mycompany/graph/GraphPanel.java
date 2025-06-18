@@ -6,21 +6,19 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- *
- * @author katii
- */
 public class GraphPanel extends javax.swing.JPanel {
 
     private final Map<String, Point> nodePositions;
     private final Map<String, Map<String, Integer>> adjList;
     private final ArrayList<String> path;
+    private int totalWeight = 0;
 
     public GraphPanel(Map<String, Map<String, Integer>> adjList, ArrayList<String> path) {
         this.adjList = adjList;
         this.path = path;
         this.nodePositions = new HashMap<>();
         calculateNodePositions();
+        this.totalWeight = calculateTotalWeight();
     }
 
     private void calculateNodePositions() {
@@ -39,6 +37,21 @@ public class GraphPanel extends javax.swing.JPanel {
         }
     }
 
+    private int calculateTotalWeight() {
+        int weight = 0;
+        if (path != null) {
+            for (int i = 0; i < path.size() - 1; i++) {
+                String from = path.get(i);
+                String to = path.get(i + 1);
+                Integer edgeWeight = adjList.get(from).get(to);
+                if (edgeWeight != null) {
+                    weight += edgeWeight;
+                }
+            }
+        }
+        return weight;
+    }
+
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
@@ -46,15 +59,15 @@ public class GraphPanel extends javax.swing.JPanel {
         Graphics2D g2d = (Graphics2D) g;
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-        int nodeRadius = 20; // Radius of the nodes
+        int nodeRadius = 20;
 
-        // Draw edges with arrows
+        // Dibujar aristas con flechas
         for (String from : adjList.keySet()) {
             Point fromPos = nodePositions.get(from);
             for (String to : adjList.get(from).keySet()) {
                 Point toPos = nodePositions.get(to);
 
-                // Change color if the edge is part of the path
+                // Comprobar si la arista está en el camino
                 boolean isPathEdge = false;
                 if (path != null) {
                     for (int i = 0; i < path.size() - 1; i++) {
@@ -66,13 +79,10 @@ public class GraphPanel extends javax.swing.JPanel {
                         }
                     }
                 }
-                if (isPathEdge) {
-                    g2d.setColor(Color.ORANGE);
-                } else {
-                    g2d.setColor(Color.BLACK);
-                }
 
-                // Calculate direction and adjust for node size
+                g2d.setColor(isPathEdge ? Color.ORANGE : Color.BLACK);
+
+                // Calcular dirección y ajustar por el radio
                 double dx = toPos.x - fromPos.x;
                 double dy = toPos.y - fromPos.y;
                 double distance = Math.sqrt(dx * dx + dy * dy);
@@ -84,13 +94,12 @@ public class GraphPanel extends javax.swing.JPanel {
                 int adjustedToX = (int) (toPos.x - offsetX);
                 int adjustedToY = (int) (toPos.y - offsetY);
 
-                // Draw the line
+                // Línea
                 g2d.drawLine(adjustedFromX, adjustedFromY, adjustedToX, adjustedToY);
 
-                // Draw the arrowhead
+                // Flecha
                 double angle = Math.atan2(dy, dx);
                 int arrowSize = 10;
-
                 int x1 = (int) (adjustedToX - arrowSize * Math.cos(angle - Math.PI / 6));
                 int y1 = (int) (adjustedToY - arrowSize * Math.sin(angle - Math.PI / 6));
                 int x2 = (int) (adjustedToX - arrowSize * Math.cos(angle + Math.PI / 6));
@@ -100,32 +109,29 @@ public class GraphPanel extends javax.swing.JPanel {
                 arrowHead.addPoint(adjustedToX, adjustedToY);
                 arrowHead.addPoint(x1, y1);
                 arrowHead.addPoint(x2, y2);
-
                 g2d.fillPolygon(arrowHead);
 
-                // Draw edge weight
+                // Peso
                 int midX = (adjustedFromX + adjustedToX) / 2;
                 int midY = (adjustedFromY + adjustedToY) / 2;
                 g2d.drawString(adjList.get(from).get(to).toString(), midX, midY);
             }
         }
 
-        // Draw nodes
+        // Dibujar nodos
         for (String node : nodePositions.keySet()) {
             Point pos = nodePositions.get(node);
-
-            // Change color if the node is part of the path
-            if (path != null && path.contains(node)) {
-                g2d.setColor(Color.ORANGE);
-            } else {
-                g2d.setColor(Color.GREEN);
-            }
-
+            g2d.setColor((path != null && path.contains(node)) ? Color.ORANGE : Color.GREEN);
             g2d.fillOval(pos.x - nodeRadius, pos.y - nodeRadius, nodeRadius * 2, nodeRadius * 2);
             g2d.setColor(Color.BLACK);
             g2d.drawOval(pos.x - nodeRadius, pos.y - nodeRadius, nodeRadius * 2, nodeRadius * 2);
             g2d.drawString(node, pos.x - 5, pos.y + 5);
         }
+
+        // Mostrar peso total del camino
+        g2d.setColor(Color.BLACK);
+        g2d.setFont(new Font("Arial", Font.BOLD, 14));
+        g2d.drawString("Peso total del camino: " + totalWeight, 20, 20);
     }
 
     @Override
